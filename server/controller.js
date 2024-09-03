@@ -55,60 +55,60 @@ exports.handleMergeFile = async function (req, res) {
   const data = await resolvePost(req);
   const { fileName, size } = data;
   // 读取上传切片
-  const chunkDir = path.resolve(UPLOAD_DIR, "chunkDir" + fileName);
-  const chunks = fs
-    .readdirSync(chunkDir)
-    .sort((a, b) => a.split("-")[1] - b.split("-")[1])
-    .map((name) => path.resolve(UPLOAD_DIR, "chunkDir" + fileName, name));
+  // const chunkDir = path.resolve(UPLOAD_DIR, "chunkDir" + fileName);
+  // const chunks = fs
+  //   .readdirSync(chunkDir)
+  //   .sort((a, b) => a.split("-")[1] - b.split("-")[1])
+  //   .map((name) => path.resolve(UPLOAD_DIR, "chunkDir" + fileName, name));
 
-  //创建写入文件夹
-  const filePath = path.resolve(UPLOAD_DIR, `${fileName}`);
-  console.log(chunks, filePath);
-  const writeStream = fs.createWriteStream(filePath);
+  // //创建写入文件夹
+  // const filePath = path.resolve(UPLOAD_DIR, `${fileName}`);
+  // console.log(chunks, filePath);
+  // const writeStream = fs.createWriteStream(filePath);
 
-  for (const chunk of chunks) {
-    const readStream = fs.createReadStream(chunk);
-    await new Promise((resolve, reject) => {
-      readStream.on("end", () => {
-        console.log(`${chunk}写入完成`);
-        resolve(`${chunk}写入完成`);
-      });
-      readStream.on("error", reject);
-      readStream.pipe(writeStream, { end: false });
-    });
-    // 在所有文件都写入后，关闭写入流
-    writeStream.end();
-    // fs.rmdirSync(chunkDir);
-    res.end(
-      JSON.stringify({
-        code: 0,
-        message: "file merged success",
-      })
-    );
-  }
+  // for (const chunk of chunks) {
+  //   const readStream = fs.createReadStream(chunk);
+  //   await new Promise((resolve, reject) => {
+  //     readStream.on("end", () => {
+  //       console.log(`${chunk}写入完成`);
+  //       resolve(`${chunk}写入完成`);
+  //     });
+  //     readStream.on("error", reject);
+  //     readStream.pipe(writeStream, { end: false });
+  //   });
+  //   // 在所有文件都写入后，关闭写入流
+  //   writeStream.end();
+  //   // fs.rmdirSync(chunkDir);
+  //   res.end(
+  //     JSON.stringify({
+  //       code: 0,
+  //       message: "file merged success",
+  //     })
+  //   );
+  // }
 
   // 成功写法
-  // const filePath = path.resolve(UPLOAD_DIR, `${fileName}`);
-  // const chunkDir = path.resolve(UPLOAD_DIR, "chunkDir" + fileName);
-  // const chunkPaths = await fse.readdir(chunkDir);
-  // chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
-  // await Promise.all(
-  //   chunkPaths.map((chunkPath, index) =>
-  //     pipeStream(
-  //       path.resolve(chunkDir, chunkPath),
-  //       // 指定位置创建可写流
-  //       fse.createWriteStream(filePath, {
-  //         start: index * size,
-  //         end: (index + 1) * size,
-  //       })
-  //     )
-  //   )
-  // );
-  // fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
-  // res.end(
-  //   JSON.stringify({
-  //     code: 0,
-  //     message: "file merged success",
-  //   })
-  // );
+  const filePath = path.resolve(UPLOAD_DIR, `${fileName}`);
+  const chunkDir = path.resolve(UPLOAD_DIR, "chunkDir" + fileName);
+  const chunkPaths = await fse.readdir(chunkDir);
+  chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1]);
+  await Promise.all(
+    chunkPaths.map((chunkPath, index) =>
+      pipeStream(
+        path.resolve(chunkDir, chunkPath),
+        // 指定位置创建可写流
+        fse.createWriteStream(filePath, {
+          start: index * size,
+          end: (index + 1) * size,
+        })
+      )
+    )
+  );
+  fse.rmdirSync(chunkDir); // 合并后删除保存切片的目录
+  res.end(
+    JSON.stringify({
+      code: 0,
+      message: "file merged success",
+    })
+  );
 };
